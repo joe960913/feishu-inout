@@ -4,7 +4,7 @@
 
 **一行命令，让 AI 编程助手读写你的飞书文档**
 
-Connect any AI coding agent to your Feishu/Lark documents in one command.
+Claude Code / Cursor / Codex / OpenCode / OpenClaw — 一键接入飞书云文档
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.6+](https://img.shields.io/badge/Python-3.6+-green.svg)](https://python.org)
@@ -39,33 +39,30 @@ Connect any AI coding agent to your Feishu/Lark documents in one command.
 <td align="center"><b>Claude Code</b></td>
 <td align="center"><b>Cursor</b></td>
 <td align="center"><b>Codex</b></td>
-<td align="center"><b>Gemini CLI</b></td>
-<td align="center"><b>GitHub Copilot</b></td>
+<td align="center"><b>OpenCode</b></td>
+<td align="center"><b>OpenClaw</b></td>
 </tr>
 <tr>
+<td align="center"><b>Gemini CLI</b></td>
+<td align="center"><b>GitHub Copilot</b></td>
 <td align="center"><b>Amp</b></td>
 <td align="center"><b>Windsurf</b></td>
 <td align="center"><b>Cline</b></td>
-<td align="center"><b>Roo Code</b></td>
-<td align="center"><b>OpenCode</b></td>
 </tr>
 <tr>
+<td align="center"><b>Roo Code</b></td>
 <td align="center"><b>Clawd</b></td>
 <td align="center"><b>Trae</b></td>
 <td align="center"><b>Kiro</b></td>
 <td align="center"><b>Kilo</b></td>
-<td align="center"><b>Goose</b></td>
 </tr>
 <tr>
+<td align="center"><b>Goose</b></td>
 <td align="center"><b>Factory.ai</b></td>
 <td align="center"><b>Antigravity</b></td>
-<td align="center"><b>...</b></td>
-<td align="center"></td>
-<td align="center"></td>
+<td align="center" colspan="2"><b>+ 所有兼容 skills 格式的 AI 编程助手</b></td>
 </tr>
 </table>
-
-支持所有兼容 skills 格式的 AI 编程助手。
 
 ## 安装
 

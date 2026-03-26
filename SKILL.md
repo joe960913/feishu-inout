@@ -1,7 +1,7 @@
 ---
 name: feishu-inout
 description: |
-  通过飞书远程 MCP 服务读写云文档、搜索文档、管理评论。当用户提到飞书、Feishu、Lark、飞书文档、云文档、读取文档、搜索文档、文档评论时使用此 skill。即使用户只是给出飞书文档链接也应触发。
+  通过飞书官方远程 MCP 服务读写云文档、搜索文档、管理评论。适用于 Claude Code、Cursor、Codex、OpenCode、OpenClaw 等 AI 编程助手。当用户提到飞书、Feishu、Lark、飞书文档、云文档、读取文档、搜索文档、文档评论时使用此 skill。即使用户只是给出飞书文档链接也应触发。
 ---
 
 # Feishu InOut - 飞书文档操作
