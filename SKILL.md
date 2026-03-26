@@ -1,395 +1,392 @@
 ---
 name: feishu-inout
 description: |
-  通过飞书官方远程 MCP 服务读写云文档、搜索文档、管理评论。适用于 Claude Code、Cursor、Codex、OpenCode、OpenClaw 等 AI 编程助手。当用户提到飞书、Feishu、Lark、飞书文档、云文档、读取文档、搜索文档、文档评论时使用此 skill。即使用户只是给出飞书文档链接也应触发。
+  Read/write Feishu/Lark cloud documents via the official Remote MCP service. Works with Claude Code, Cursor, Codex, OpenCode, OpenClaw, and other AI coding agents. Trigger this skill when the user mentions Feishu, Lark, cloud docs, read/search/create documents, or provides a Feishu/Lark document URL.
 ---
 
-# Feishu InOut - 飞书文档操作
+# Feishu InOut - Feishu/Lark Document Operations
 
-通过飞书官方远程 MCP 服务 (`https://mcp.feishu.cn/mcp`) 操作云文档，零依赖，纯 Python。
+Operate cloud documents via the official Feishu/Lark Remote MCP service (`https://mcp.feishu.cn/mcp`). Zero dependencies, pure Python.
 
-## 快速判断：用户是否已完成配置？
+## Quick Check: Is the User Already Configured?
 
-检查两件事：
-1. 环境变量 `FEISHU_APP_ID` 和 `FEISHU_APP_SECRET` 是否已设置（运行 `echo $FEISHU_APP_ID`）
-2. UAT token 是否存在且有效（运行脚本的 `whoami` 命令）
+Check two things:
+1. Are env vars `FEISHU_APP_ID` and `FEISHU_APP_SECRET` set? (run `echo $FEISHU_APP_ID`)
+2. Is a valid UAT token present? (run the script's `whoami` command)
 
-如果都就绪 → 直接跳到 [使用方式](#使用方式)。
-如果缺少任何一项 → 引导用户走 [首次配置](#首次配置指南从零开始) 流程。
+If both are ready → skip to [Usage](#usage).
+If either is missing → guide the user through the [First-Time Setup](#first-time-setup).
 
 ---
 
-## 首次配置指南（从零开始）
+## First-Time Setup
 
-开始引导前，先询问用户：
+Before starting, ask the user:
 
-> 你需要哪些功能？
-> 1. **只读文档**（搜索、阅读、浏览）— 最少权限，最快配置
-> 2. **读写文档**（+ 创建、编辑、评论）— 推荐，覆盖大部分场景
-> 3. **全部功能**（+ 发消息到群聊/私聊）— 需要额外开启机器人能力并发布应用版本
+> Which features do you need?
+> 1. **Read-only** (search, read, browse) — minimal permissions, fastest setup
+> 2. **Read & write** (+ create, edit, comments) — recommended, covers most scenarios
+> 3. **All features** (+ send messages to groups/DMs) — requires enabling bot capability and publishing an app version
 
-根据用户选择，在第 2 步展示对应的权限字符串（用逗号分隔，方便复制粘贴批量导入），在第 6 步决定是否引导机器人配置。
+Based on the user's choice, show the matching permission string in Step 2 and decide whether to guide bot setup in Step 6.
 
-**必须按用户选择展示对应的权限字符串：**
+**You MUST show the corresponding permission string for the user's choice:**
 
-选择 1（只读文档）：
+Choice 1 (read-only):
 ```
 docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read
 ```
 
-选择 2（读写文档，推荐）：
+Choice 2 (read & write, recommended):
 ```
 docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read,docx:document,docx:document:create,docx:document:write_only,docs:document.media:upload,docs:document.media:download,wiki:node:read,wiki:node:create,docs:document.comment:read,docs:document.comment:create,contact:user:search,contact:contact.base:readonly,contact:user.base:readonly,board:whiteboard:node:read,drive:drive
 ```
 
-选择 3（全部功能）：
+Choice 3 (all features):
 ```
 docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read,docx:document,docx:document:create,docx:document:write_only,docs:document.media:upload,docs:document.media:download,wiki:node:read,wiki:node:create,docs:document.comment:read,docs:document.comment:create,contact:user:search,contact:contact.base:readonly,contact:user.base:readonly,board:whiteboard:node:read,drive:drive,im:message:send_as_bot,im:message,im:message:send
 ```
 
-引导用户在飞书开放平台 → 权限管理 → **批量导入/导出权限** 中粘贴对应字符串。
+Guide the user to paste the string in the open platform → Permission Management → **Batch Import/Export**.
 
-分 6 步，引导用户逐步完成。每步完成后确认再进入下一步。
+6 steps total. Confirm each step is done before moving to the next.
 
-### 第 1 步：创建飞书自建应用
+### Step 1: Create a Feishu/Lark App
 
-1. 打开 [飞书开放平台](https://open.feishu.cn/app)，登录飞书账号
-2. 点击右上角 **创建自建应用**
-3. 填写应用名称（任意，如"我的文档助手"）和描述
-4. 创建完成后，进入应用详情页
-5. 在 **凭证与基础信息** 页面，找到并记录：
-   - **App ID**（格式：`cli_xxxxxxxxxxxxxxxx`）
-   - **App Secret**（一串字母数字）
+1. Go to [Lark Open Platform](https://open.larksuite.com/app) (China: [open.feishu.cn](https://open.feishu.cn/app)), log in
+2. Click **Create Custom App** in the top right
+3. Enter an app name (anything, e.g. "My Doc Assistant") and description
+4. After creation, go to the app detail page
+5. On the **Credentials & Basic Info** page, note:
+   - **App ID** (format: `cli_xxxxxxxxxxxxxxxx`)
+   - **App Secret** (alphanumeric string)
 
-提醒用户自行将这两个值设置为环境变量（见第 4 步），不要将 App Secret 直接发送给 AI 或粘贴到对话中。
+Remind the user to set these as environment variables (see Step 4). **Do NOT let the user send the App Secret to you or paste it in the conversation.**
 
-### 第 2 步：开通 API 权限
+### Step 2: Enable API Permissions
 
-进入应用 → 左侧菜单 **权限管理** → 点击 **批量导入/导出权限**，粘贴以下全部权限一键导入：
+Go to the app → **Permission Management** → **Batch Import/Export**, paste the permission string that matches the user's choice from above.
 
-```
-docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read,docx:document,docx:document:create,docx:document:write_only,docs:document.media:upload,docs:document.media:download,wiki:node:read,wiki:node:create,docs:document.comment:read,docs:document.comment:create,contact:user:search,contact:contact.base:readonly,contact:user.base:readonly,board:whiteboard:node:read,drive:drive,im:message:send_as_bot,im:message,im:message:send
-```
+Or enable individually:
 
-或者逐个搜索开通以下权限：
+**Core (required):**
 
-**必须开通（文档读写核心权限）：**
+| Scope | Description | Auth Type |
+|-------|-------------|-----------|
+| `docx:document:readonly` | View documents | App |
+| `search:docs:read` | Search documents | User |
+| `wiki:wiki:readonly` | View wiki | User + App |
+| `im:chat:read` | View chat info | App |
+| `task:task:read` | View tasks | App |
 
-| 权限 scope | 名称 | 权限类型 |
-|-----------|------|----------|
-| `docx:document:readonly` | 查看新版文档 | 应用身份 |
-| `search:docs:read` | 搜索云文档 | 用户身份 |
-| `wiki:wiki:readonly` | 查看知识库 | 用户身份 + 应用身份 |
-| `im:chat:read` | 查看群信息 | 应用身份 |
-| `task:task:read` | 查看任务信息 | 应用身份 |
+**Write/edit (append, replace, insert, overwrite, delete, create-doc):**
 
-**写入/编辑文档（append、replace、insert、overwrite、delete、create-doc）：**
+| Scope | Description | Auth Type |
+|-------|-------------|-----------|
+| `docx:document` | View & edit documents | App |
+| `docx:document:create` | Create documents | App |
+| `docx:document:write_only` | Write documents | App |
+| `docs:document.media:upload` | Upload images | App |
+| `wiki:node:read` | View wiki nodes | App |
+| `wiki:node:create` | Create wiki nodes | App |
 
-| 权限 scope | 名称 | 权限类型 |
-|-----------|------|----------|
-| `docx:document` | 查看、编辑新版文档 | 应用身份 |
-| `docx:document:create` | 创建新版文档 | 应用身份 |
-| `docx:document:write_only` | 编辑新版文档 | 应用身份 |
-| `docs:document.media:upload` | 上传图片到文档 | 应用身份 |
-| `wiki:node:read` | 查看知识库节点 | 应用身份 |
-| `wiki:node:create` | 创建知识库节点 | 应用身份 |
+**Comments (get-comments, add-comments):**
 
-**评论功能（get-comments、add-comments）：**
+| Scope | Description | Auth Type |
+|-------|-------------|-----------|
+| `docs:document.comment:read` | Read comments | App |
+| `docs:document.comment:create` | Create comments | App |
 
-| 权限 scope | 名称 | 权限类型 |
-|-----------|------|----------|
-| `docs:document.comment:read` | 查看文档评论 | 应用身份 |
-| `docs:document.comment:create` | 创建文档评论 | 应用身份 |
+**Users (search-user, get-user):**
 
-**用户功能（search-user、get-user）：**
+| Scope | Description | Auth Type |
+|-------|-------------|-----------|
+| `contact:user:search` | Search users | User |
+| `contact:contact.base:readonly` | Contact info | App |
+| `contact:user.base:readonly` | User info | App |
 
-| 权限 scope | 名称 | 权限类型 |
-|-----------|------|----------|
-| `contact:user:search` | 搜索用户 | 用户身份 |
-| `contact:contact.base:readonly` | 获取通讯录基本信息 | 应用身份 |
-| `contact:user.base:readonly` | 获取用户基本信息 | 应用身份 |
+**Files (fetch-file):**
 
-**文件功能（fetch-file）：**
+| Scope | Description | Auth Type |
+|-------|-------------|-----------|
+| `docs:document.media:download` | Download images/attachments | App |
+| `board:whiteboard:node:read` | View whiteboards | App |
+| `drive:drive` | Manage drive files | App |
 
-| 权限 scope | 名称 | 权限类型 |
-|-----------|------|----------|
-| `docs:document.media:download` | 下载文档中的图片和附件 | 应用身份 |
-| `board:whiteboard:node:read` | 查看画板 | 应用身份 |
-| `drive:drive` | 管理云空间文件 | 应用身份 |
+**Messaging (send-text, send-doc, list-chats):**
 
-**消息功能（send-text、send-doc、list-chats）：**
+| Scope | Description | Auth Type |
+|-------|-------------|-----------|
+| `im:message:send_as_bot` | Send as bot | App |
+| `im:message` | Manage messages | App |
+| `im:message:send` | Send messages | App |
 
-| 权限 scope | 名称 | 权限类型 |
-|-----------|------|----------|
-| `im:message:send_as_bot` | 以应用身份发消息 | 应用身份 |
-| `im:message` | 获取与发送消息 | 应用身份 |
-| `im:message:send` | 发送消息 | 应用身份 |
+**Note**: Messaging permissions only need to be enabled if the user chose "All features". Also requires completing Step 6 (bot capability).
 
-**注意**：消息功能需要额外完成第 6 步（开启机器人能力）。如果用户选择了"全部功能"才需要引导开通这组权限。
+After enabling, "User" type permissions showing "consistent with user scope" is normal. "App" type showing "-" is also normal.
 
-开通后，**用户身份**类型的权限标注为"与用户权限范围一致"是正常的。**应用身份**类型标注"-"也是正常的。
+Confirm all permissions show ✅ **Enabled**.
 
-确认所有权限状态显示为 ✅ **已开通**。
+### Step 3: Add Redirect URL (for OAuth)
 
-### 第 3 步：配置重定向 URL（OAuth 授权用）
-
-进入应用 → 左侧菜单 **安全设置** → **重定向URL** → 添加：
+Go to the app → **Security Settings** → **Redirect URL** → Add:
 
 ```
 http://localhost:9876/callback
 ```
 
-这是 OAuth 授权流程的回调地址，用于获取用户身份令牌（UAT）。
+This is the OAuth callback URL for obtaining the User Access Token (UAT).
 
-### 第 4 步：设置环境变量
+### Step 4: Set Environment Variables
 
-指导用户自行将凭证写入 shell 配置文件。**不要让用户把 App Secret 发给你，也不要在对话中输出或回显凭证值。**
+Guide the user to set credentials themselves. **Do NOT let the user send the App Secret to you, and do NOT output or echo credential values in the conversation.**
 
-根据用户操作系统，指导对应的设置方式：
+Based on the user's OS:
 
-**macOS / Linux：**
+**macOS / Linux:**
 ```bash
-echo 'export FEISHU_APP_ID="你的AppID"' >> ~/.zshrc
-echo 'export FEISHU_APP_SECRET="你的AppSecret"' >> ~/.zshrc
+echo 'export FEISHU_APP_ID="your_app_id"' >> ~/.zshrc
+echo 'export FEISHU_APP_SECRET="your_app_secret"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-**Windows (PowerShell)：**
+**Windows (PowerShell):**
 ```powershell
-[System.Environment]::SetEnvironmentVariable('FEISHU_APP_ID', '你的AppID', 'User')
-[System.Environment]::SetEnvironmentVariable('FEISHU_APP_SECRET', '你的AppSecret', 'User')
+[System.Environment]::SetEnvironmentVariable('FEISHU_APP_ID', 'your_app_id', 'User')
+[System.Environment]::SetEnvironmentVariable('FEISHU_APP_SECRET', 'your_app_secret', 'User')
 ```
-设置后需重启终端或 IDE 使环境变量生效。
+Restart terminal or IDE after setting.
 
-设置完成后，验证是否生效（仅验证 App ID，不要输出 Secret）：
+Verify (App ID only, never output the Secret):
 - macOS/Linux: `echo $FEISHU_APP_ID`
 - Windows: `echo $env:FEISHU_APP_ID`
 
-### 第 5 步：OAuth 登录获取 UAT
+### Step 5: OAuth Login to Get UAT
 
-运行登录命令：
+Run the login command:
 ```bash
 python3 ~/.claude/skills/feishu-inout/scripts/feishu_mcp.py login
 ```
 
-流程：
-1. 脚本自动打开浏览器跳转飞书授权页面
-2. 如果提示"权限不足"，浏览器会**列出具体缺少的权限名称**，去开放平台开通后点"刷新重试"即可，不需要一次性开完所有权限
-3. 用户在浏览器中点击 **授权**
-4. 浏览器显示"授权成功！可以关闭此页面了。"
-5. 终端显示 `UAT saved!` 表示成功
+Flow:
+1. The script opens the browser to the Feishu/Lark authorization page
+2. If "insufficient permissions" is shown, the browser will **list the exact missing permissions** — enable them on the open platform and click "Retry", no need to enable everything at once
+3. The user clicks **Authorize** in the browser
+4. Browser shows "Authorization successful! You can close this page."
+5. Terminal shows `UAT saved!` — done
 
-Token 有效期 2 小时，脚本会自动用 refresh_token 续期。如果过期太久，重新运行 `login` 即可。
+Token expires in 2 hours; the script auto-refreshes via refresh_token. If expired too long, re-run `login`.
 
-验证一切就绪：
+Verify everything is ready:
 ```bash
 python3 ~/.claude/skills/feishu-inout/scripts/feishu_mcp.py whoami
-python3 ~/.claude/skills/feishu-inout/scripts/feishu_mcp.py search-doc "测试"
+python3 ~/.claude/skills/feishu-inout/scripts/feishu_mcp.py search-doc "test"
 ```
 
-### 第 6 步：开启机器人能力（仅"全部功能"需要）
+### Step 6: Enable Bot Capability (only if "All features" was chosen)
 
-如果用户在开头选择了"全部功能"（需要发消息），引导以下步骤：
+If the user chose "All features" (needs messaging), guide these steps:
 
-1. 进入应用 → **添加应用能力** → 开启 **机器人**
-2. 进入 **版本管理与发布** → 创建版本 → 提交发布（需管理员审批通过）
-3. 发布后，将机器人**加入目标群组**，机器人才能往群里发消息
-4. 如需给个人发私聊，该用户需先在飞书中**主动搜索应用名并打开与机器人的对话**
+1. Go to the app → **Add Capabilities** → Enable **Bot**
+2. Go to **Version Management & Release** → Create version → Submit for approval
+3. After approval, **add the bot to target groups** so it can send messages
+4. For DMs, the target user must **search for the app name in Feishu/Lark and open a conversation with the bot first**
 
-验证机器人是否正常：
+Verify the bot is working:
 ```bash
 python3 ~/.claude/skills/feishu-inout/scripts/feishu_mcp.py list-chats
 ```
-如果返回群组列表，说明机器人已激活并加入了群。
+If it returns a group list, the bot is active and has joined groups.
 
-如果用户没选"全部功能"，跳过此步，告知用户后续需要发消息时再配置即可。
+If the user didn't choose "All features", skip this step and let them know they can configure it later if needed.
 
 ---
 
-## 认证模式
+## Authentication
 
-脚本自动选择最佳 token：
-- **UAT（用户身份）** - 优先使用，支持搜索文档、访问个人文档等用户级操作
-- **TAT（应用身份）** - UAT 不可用时的兜底，功能受限（搜索不可用，只能访问应用有权的文档）
+The script auto-selects the best token:
+- **UAT (User Access Token)** — preferred. Supports searching docs, accessing personal docs, and other user-level operations
+- **TAT (Tenant Access Token)** — fallback when UAT is unavailable. Limited: search not available, can only access docs the app has been granted access to
 
-两种 token 对应飞书 MCP 不同的请求头：
+The two tokens use different MCP headers:
 - UAT → `X-Lark-MCP-UAT`
 - TAT → `X-Lark-MCP-TAT`
 
-检查当前状态：
+Check current status:
 ```bash
 python3 ~/.claude/skills/feishu-inout/scripts/feishu_mcp.py whoami
 ```
 
-重新登录（token 过期时）：
+Re-login (when token expires):
 ```bash
 python3 ~/.claude/skills/feishu-inout/scripts/feishu_mcp.py login
 ```
 
 ---
 
-## 文档 ID 提取
+## Extracting Document ID
 
-从飞书 URL 提取 docID：
+Extract docID from Feishu/Lark URLs:
 ```
-https://xxx.feishu.cn/docx/ABC123def   → docID = ABC123def
-https://xxx.feishu.cn/wiki/XYZ789abc   → docID = XYZ789abc
-https://xxx.feishu.cn/docs/doccn123c   → docID = doccn123c
+https://xxx.feishu.cn/docx/ABC123def      → docID = ABC123def
+https://xxx.larksuite.com/docx/ABC123def   → docID = ABC123def
+https://xxx.feishu.cn/wiki/XYZ789abc       → docID = XYZ789abc
+https://xxx.feishu.cn/docs/doccn123c       → docID = doccn123c
 ```
 
-规则：URL 最后一段路径即为 docID。`/docx/`、`/wiki/`、`/docs/` 后面的部分。
+Rule: the docID is the last path segment after `/docx/`, `/wiki/`, or `/docs/`.
 
 ---
 
-## 使用方式
+## Usage
 
-所有操作通过 `scripts/feishu_mcp.py` 脚本完成（以下用 `$S` 代替完整路径）：
+All operations use the `scripts/feishu_mcp.py` script (`$S` = full path below):
 
 ```bash
 S=~/.claude/skills/feishu-inout/scripts/feishu_mcp.py
 
-# 认证
-python3 $S login                                   # OAuth 登录获取 UAT
-python3 $S whoami                                  # 查看当前 token 状态
+# Auth
+python3 $S login                                   # OAuth login to get UAT
+python3 $S whoami                                  # Show current token status
 
-# 读取文档
-python3 $S fetch-doc <docID>                       # 读取完整文档
-python3 $S fetch-doc <docID> 0 5000                # 分页读取（offset, limit）
+# Read documents
+python3 $S fetch-doc <docID>                       # Read full document
+python3 $S fetch-doc <docID> 0 5000                # Paginated read (offset, limit)
 
-# 搜索
-python3 $S search-doc <keyword>                    # 搜索文档（需 UAT）
-python3 $S search-user <keyword>                   # 搜索用户
+# Search
+python3 $S search-doc <keyword>                    # Search documents (needs UAT)
+python3 $S search-user <keyword>                   # Search users
 
-# 浏览
-python3 $S list-docs                               # 列出"我的文档库"
-python3 $S list-docs <docID>                       # 列出某文档的子文档
-python3 $S get-user                                # 获取当前用户信息
-python3 $S get-user <open_id>                      # 获取指定用户信息
+# Browse
+python3 $S list-docs                               # List "My Library"
+python3 $S list-docs <docID>                       # List child docs
+python3 $S get-user                                # Get current user info
+python3 $S get-user <open_id>                      # Get specific user info
 
-# 创建文档（一步到位，带 markdown 内容）
+# Create document (one step, with markdown content)
 python3 $S create-doc <title> '<markdown>'
 python3 $S create-doc <title> '<markdown>' '{"wiki_space":"my_library"}'
 python3 $S create-doc <title> '<markdown>' '{"folder_token":"fldcnXXX"}'
 
-# 更新文档（7 种模式）
-python3 $S append <docID> '<markdown>'             # 追加到末尾
-python3 $S overwrite <docID> '<markdown>'          # 覆盖整个文档（慎用）
-python3 $S replace <docID> '<selection>' '<md>'    # 定位替换
-python3 $S insert-after <docID> '<sel>' '<md>'     # 在匹配位置后插入
-python3 $S insert-before <docID> '<sel>' '<md>'    # 在匹配位置前插入
-python3 $S delete-range <docID> '<selection>'      # 删除匹配内容
+# Update document (7 modes)
+python3 $S append <docID> '<markdown>'             # Append to end
+python3 $S overwrite <docID> '<markdown>'          # Overwrite entire doc (use with caution)
+python3 $S replace <docID> '<selection>' '<md>'    # Replace matched range
+python3 $S insert-after <docID> '<sel>' '<md>'     # Insert after match
+python3 $S insert-before <docID> '<sel>' '<md>'    # Insert before match
+python3 $S delete-range <docID> '<selection>'      # Delete matched content
 
-# 评论
-python3 $S get-comments <docID>                    # 获取全部评论
-python3 $S get-comments <docID> whole              # 仅全文评论
-python3 $S get-comments <docID> segment            # 仅划词评论
-python3 $S add-comments <docID> <text>             # 添加文本评论
+# Comments
+python3 $S get-comments <docID>                    # Get all comments
+python3 $S get-comments <docID> whole              # Whole-doc comments only
+python3 $S get-comments <docID> segment            # Inline comments only
+python3 $S add-comments <docID> <text>             # Add a text comment
 
-# 文件
-python3 $S fetch-file <token>                      # 获取文件/图片内容
-python3 $S fetch-file <token> whiteboard           # 获取画板内容
+# Files
+python3 $S fetch-file <token>                      # Get file/image content
+python3 $S fetch-file <token> whiteboard           # Get whiteboard content
 
-# 消息（通过 Open API，需开启机器人能力）
-python3 $S list-chats                              # 列出机器人所在群组
-python3 $S send-text <chat_id> <text>              # 发文本到群
-python3 $S send-doc <chat_id> <doc_id>             # 分享文档到群
-python3 $S send-text-user <open_id> <text>         # 发文本给用户（需用户已联系机器人）
-python3 $S send-rich <chat_id> '<interactive_json>' # 发富文本/卡片消息
+# Messaging (via Open API, requires bot capability)
+python3 $S list-chats                              # List groups the bot is in
+python3 $S send-text <chat_id> <text>              # Send text to group
+python3 $S send-doc <chat_id> <doc_id>             # Share doc link to group
+python3 $S send-text-user <open_id> <text>         # Send text to user (needs bot contact)
+python3 $S send-rich <chat_id> '<interactive_json>' # Send rich/card message
 
-# 高级（直接传 JSON 调任意工具）
+# Advanced (raw JSON call to any tool)
 python3 $S call <toolName> '<jsonArgs>'
-python3 $S update-doc '{"doc_id":"xxx","mode":"replace_range","selection_by_title":"## 章节","markdown":"新内容"}'
+python3 $S update-doc '{"doc_id":"xxx","mode":"replace_range","selection_by_title":"## Section","markdown":"New content"}'
 ```
 
-### 定位语法（用于 replace / insert / delete）
+### Selection Syntax (for replace / insert / delete)
 
-- **范围匹配**：`开头内容...结尾内容` — 匹配两段文字之间的所有内容
-- **精确匹配**：`完整文本` — 不含 `...`，精确匹配
-- **标题定位**：通过 `update-doc` 的 JSON 模式使用 `selection_by_title: "## 标题"`，定位整个章节
+- **Range match**: `start text...end text` — matches everything between the two text fragments
+- **Exact match**: `exact text` — no `...`, matches exactly
+- **Title-based**: use `selection_by_title: "## Title"` in the JSON mode of `update-doc` to target an entire section
 
 ---
 
-## 工作流
+## Workflows
 
-### 读取文档内容
-1. 从用户给的 URL 提取 docID
-2. 运行 `fetch-doc <docID>`
-3. 解析返回的 JSON，`result.content[0].text` 中包含文档的 markdown 内容
-4. 大文档可分页：`fetch-doc <docID> <offset> <limit>`
+### Read a Document
+1. Extract docID from the user's URL
+2. Run `fetch-doc <docID>`
+3. Parse the returned JSON — `result.content[0].text` contains the markdown content
+4. For large docs, use pagination: `fetch-doc <docID> <offset> <limit>`
 
-### 搜索并读取
-1. 运行 `search-doc <keyword>` 找到文档
-2. 从结果的 `items` 数组中提取目标文档的 `id`（即 docID）和 `title`
-3. 如果有多个结果，先列出让用户选择
-4. 运行 `fetch-doc <docID>` 读取选中文档内容
+### Search and Read
+1. Run `search-doc <keyword>` to find documents
+2. Extract `id` (docID) and `title` from the `items` array in the result
+3. If multiple results, list them and let the user choose
+4. Run `fetch-doc <docID>` to read the selected document
 
-### 创建文档（一步到位）
-1. 运行 `create-doc <title> '<markdown>'` 直接创建带内容的文档
-2. 可指定位置：知识库节点 `wiki_node`、知识空间 `wiki_space`（`my_library` = 个人文档库）、文件夹 `folder_token`
-3. 返回 `doc_id` 和 `doc_url`
-4. **注意**：不指定位置时文档会创建在个人空间根目录，不会出现在飞书"最近访问"列表中。建议指定 `wiki_space: "my_library"` 创建到个人文档库，方便用户在飞书中找到
+### Create a Document (one step)
+1. Run `create-doc <title> '<markdown>'` to create a doc with content
+2. Optionally specify location: wiki node `wiki_node`, wiki space `wiki_space` (`my_library` = personal library), or folder `folder_token`
+3. Returns `doc_id` and `doc_url`
+4. **Note**: without a location, the doc is created in the personal space root and won't appear in the "Recent" list. Recommend using `wiki_space: "my_library"` so the user can find it easily
 
-### 编辑文档
-优先使用局部更新，避免 overwrite：
-1. `append` — 追加内容到文档末尾
-2. `replace` — 定位并替换指定内容（用 `开头...结尾` 范围匹配，或精确文本匹配）
-3. `insert-after` / `insert-before` — 在指定位置前后插入
-4. `delete-range` — 删除匹配的内容
-5. `overwrite` — 最后手段，会清空文档重写（丢失图片、评论等）
+### Edit a Document
+Prefer partial updates over overwrite:
+1. `append` — add content to the end
+2. `replace` — find and replace specific content (use `start...end` range match or exact text)
+3. `insert-after` / `insert-before` — insert at a specific position
+4. `delete-range` — delete matched content
+5. `overwrite` — last resort, clears the entire doc (loses images, comments, etc.)
 
-**按标题定位整个章节**（替换/删除整个章节时特别好用）：
+**Target an entire section by title** (great for replacing/deleting whole sections):
 ```bash
-python3 $S call update-doc '{"doc_id":"xxx","mode":"replace_range","selection_by_title":"### 章节标题","markdown":"### 章节标题\n\n替换后的内容"}'
+python3 $S call update-doc '{"doc_id":"xxx","mode":"replace_range","selection_by_title":"### Section Title","markdown":"### Section Title\n\nReplaced content"}'
 ```
-`selection_by_title` 会自动匹配从该标题到下一个同级标题之间的所有内容。
+`selection_by_title` matches from the heading to the next heading of the same level.
 
-### 浏览知识库
-1. 运行 `list-docs` 查看"我的文档库"
-2. 或 `list-docs <docID>` 查看某文档的子文档（返回中有 `has_child` 字段）
-3. 可以逐层递归浏览
+### Browse Wiki
+1. Run `list-docs` to view "My Library"
+2. Or `list-docs <docID>` to view child docs (response includes `has_child` field)
+3. Recursively browse deeper levels
 
-### @用户 工作流
-1. 运行 `search-user <姓名>` 获取用户 `open_id`
-2. 在 `add-comments` 中使用高级模式：`call add-comments '{"doc_id":"xxx","elements":[{"type":"mention","open_id":"ou_xxx"}]}'`
+### @Mention Workflow
+1. Run `search-user <name>` to get the user's `open_id`
+2. Use advanced mode in `add-comments`: `call add-comments '{"doc_id":"xxx","elements":[{"type":"mention","open_id":"ou_xxx"}]}'`
 
-### 写文档并发送到群聊
-1. 运行 `create-doc <title> '<markdown>'` 创建文档
-2. 运行 `list-chats` 查看机器人所在的群，获取 `chat_id`
-3. 运行 `send-doc <chat_id> <doc_id>` 将文档分享到群聊
-4. 如需 @人：先 `search-user` 获取 open_id，然后用 `send-rich` 发送包含 at 的富文本消息
+### Create Doc and Send to Group Chat
+1. Run `create-doc <title> '<markdown>'` to create the doc
+2. Run `list-chats` to see groups the bot is in, get the `chat_id`
+3. Run `send-doc <chat_id> <doc_id>` to share the doc to the group
+4. To @mention: first `search-user` to get open_id, then use `send-rich` to send a rich message with mentions
 
-### 发送消息
-- **发群消息**：`send-text <chat_id> <text>` — 需要机器人在群内
-- **发私聊**：`send-text-user <open_id> <text>` — 需要用户已主动联系过机器人
-- **分享文档**：`send-doc <chat_id> <doc_id>` — 发送文档链接到群
-- **富文本/卡片**：`send-rich <chat_id> '<json>'` — 发送 interactive 格式的卡片消息
+### Send Messages
+- **Group message**: `send-text <chat_id> <text>` — bot must be in the group
+- **DM**: `send-text-user <open_id> <text>` — user must have contacted the bot first
+- **Share doc**: `send-doc <chat_id> <doc_id>` — send doc link to group
+- **Rich/card**: `send-rich <chat_id> '<json>'` — send interactive card message
 
-**前提条件**：应用需开启机器人能力并发布版本，机器人需被加入目标群组或用户需主动与机器人对话。
+**Prerequisites**: App must have bot capability enabled and a published version. Bot must be added to the target group, or the user must have opened a conversation with the bot.
 
 ---
 
-## 错误处理
+## Error Handling
 
-| 错误码 | 含义 | 解决方案 |
-|--------|------|----------|
-| `-32011` | 认证凭证缺失 | 检查环境变量 `FEISHU_APP_ID` 和 `FEISHU_APP_SECRET` 是否设置 |
-| `-32003` | 凭证无效或过期 | TAT: 检查 App Secret 是否正确；UAT: 运行 `login` 重新授权 |
-| `-32601` | 工具或方法不存在 | 运行 `tools` 查看可用工具列表 |
-| `-32602` | 参数错误 | 检查参数名和格式是否正确 |
-| `-32700` | JSON 格式错误 | 检查传入的 JSON 参数格式 |
-| `429` | 请求频率超限 | 等待几秒后重试 |
-| `99991679` | 用户未授权该 scope | 需要重新 `login`，或在应用权限管理中开通对应权限 |
+| Code | Meaning | Solution |
+|------|---------|----------|
+| `-32011` | Auth credentials missing | Check that `FEISHU_APP_ID` and `FEISHU_APP_SECRET` env vars are set |
+| `-32003` | Invalid or expired credentials | TAT: check App Secret; UAT: run `login` to re-authorize |
+| `-32601` | Tool or method not found | Run `tools` to see available tools |
+| `-32602` | Invalid parameters | Check parameter names and format |
+| `-32700` | JSON parse error | Check the JSON argument format |
+| `429` | Rate limited | Wait a few seconds and retry |
+| `99991679` | User hasn't authorized this scope | Re-run `login`, or enable the permission in the app's permission management |
 
-### 常见问题
+### Common Issues
 
-**search-doc 返回 "required ... search:docs:read"**
-→ 这个权限是用户身份类型，必须用 UAT。运行 `login` 获取 UAT。
+**search-doc returns "required ... search:docs:read"**
+→ This permission requires user identity (UAT). Run `login` to get UAT.
 
-**fetch-doc 返回 "permission denied"**
-→ TAT 模式下，应用需要被加为文档协作者才能访问。用 UAT 可以访问用户自己有权的所有文档。
+**fetch-doc returns "permission denied"**
+→ In TAT mode, the app must be added as a document collaborator. Use UAT (after `login`) to access all docs the user has permission for.
 
-**login 后浏览器没反应**
-→ 检查是否已在飞书应用的安全设置中添加重定向 URL `http://localhost:9876/callback`。
+**Browser doesn't respond after login**
+→ Check that the redirect URL `http://localhost:9876/callback` has been added in the app's Security Settings.
 
-**UAT 过期**
-→ 脚本会自动尝试用 refresh_token 续期。如果 refresh_token 也过期（30天），需要重新 `login`。
+**UAT expired**
+→ The script auto-attempts refresh via refresh_token. If the refresh_token has also expired (30 days), re-run `login`.
