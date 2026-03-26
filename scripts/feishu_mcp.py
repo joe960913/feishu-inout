@@ -133,7 +133,7 @@ def exchange_code_for_uat(code):
 def oauth_login():
     """Start OAuth2 flow: open browser, catch callback, exchange for UAT."""
     app_id, _ = get_app_id_secret()
-    scopes = "search:docs:read wiki:wiki:readonly docx:document:readonly docx:document docx:document:create docx:document:write_only docs:document.comment:read docs:document.comment:create contact:user:search contact:contact.base:readonly contact:user.base:readonly im:chat:read task:task:read"
+    scopes = "docx:document:readonly search:docs:read wiki:wiki:readonly im:chat:read task:task:read docx:document docx:document:create docx:document:write_only docs:document.media:upload docs:document.media:download wiki:node:read wiki:node:create docs:document.comment:read docs:document.comment:create contact:user:search contact:contact.base:readonly contact:user.base:readonly board:whiteboard:node:read drive:drive"
     auth_url = f"{AUTH_URL}?app_id={app_id}&redirect_uri={REDIRECT_URI}&state=feishu_inout&scope={scopes}"
 
     captured = {}
