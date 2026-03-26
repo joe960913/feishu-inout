@@ -40,7 +40,7 @@ description: |
 进入应用 → 左侧菜单 **权限管理** → 点击 **批量导入/导出权限**，粘贴以下全部权限一键导入：
 
 ```
-docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read,docx:document,docx:document:create,docx:document:write_only,docs:document.media:upload,docs:document.media:download,wiki:node:read,wiki:node:create,docs:document.comment:read,docs:document.comment:create,contact:user:search,contact:contact.base:readonly,contact:user.base:readonly,board:whiteboard:node:read,drive:drive
+docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read,docx:document,docx:document:create,docx:document:write_only,docs:document.media:upload,docs:document.media:download,wiki:node:read,wiki:node:create,docs:document.comment:read,docs:document.comment:create,contact:user:search,contact:contact.base:readonly,contact:user.base:readonly,board:whiteboard:node:read,drive:drive,im:message:send_as_bot,im:message,im:message:send
 ```
 
 或者逐个搜索开通以下权限：
@@ -88,6 +88,16 @@ docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:tas
 | `docs:document.media:download` | 下载文档中的图片和附件 | 应用身份 |
 | `board:whiteboard:node:read` | 查看画板 | 应用身份 |
 | `drive:drive` | 管理云空间文件 | 应用身份 |
+
+**消息功能（send-text、send-doc、list-chats）：**
+
+| 权限 scope | 名称 | 权限类型 |
+|-----------|------|----------|
+| `im:message:send_as_bot` | 以应用身份发消息 | 应用身份 |
+| `im:message` | 获取与发送消息 | 应用身份 |
+| `im:message:send` | 发送消息 | 应用身份 |
+
+**注意**：消息功能需要在应用中**开启机器人能力**（添加应用能力 → 机器人），并**发布一个版本**使其生效。机器人只能给已与其建立联系的用户或所在群组发消息。
 
 开通后，**用户身份**类型的权限标注为"与用户权限范围一致"是正常的。**应用身份**类型标注"-"也是正常的。
 
@@ -234,6 +244,13 @@ python3 $S add-comments <docID> <text>             # 添加文本评论
 python3 $S fetch-file <token>                      # 获取文件/图片内容
 python3 $S fetch-file <token> whiteboard           # 获取画板内容
 
+# 消息（通过 Open API，需开启机器人能力）
+python3 $S list-chats                              # 列出机器人所在群组
+python3 $S send-text <chat_id> <text>              # 发文本到群
+python3 $S send-doc <chat_id> <doc_id>             # 分享文档到群
+python3 $S send-text-user <open_id> <text>         # 发文本给用户（需用户已联系机器人）
+python3 $S send-rich <chat_id> '<interactive_json>' # 发富文本/卡片消息
+
 # 高级（直接传 JSON 调任意工具）
 python3 $S call <toolName> '<jsonArgs>'
 python3 $S update-doc '{"doc_id":"xxx","mode":"replace_range","selection_by_title":"## 章节","markdown":"新内容"}'
@@ -289,6 +306,20 @@ python3 $S call update-doc '{"doc_id":"xxx","mode":"replace_range","selection_by
 ### @用户 工作流
 1. 运行 `search-user <姓名>` 获取用户 `open_id`
 2. 在 `add-comments` 中使用高级模式：`call add-comments '{"doc_id":"xxx","elements":[{"type":"mention","open_id":"ou_xxx"}]}'`
+
+### 写文档并发送到群聊
+1. 运行 `create-doc <title> '<markdown>'` 创建文档
+2. 运行 `list-chats` 查看机器人所在的群，获取 `chat_id`
+3. 运行 `send-doc <chat_id> <doc_id>` 将文档分享到群聊
+4. 如需 @人：先 `search-user` 获取 open_id，然后用 `send-rich` 发送包含 at 的富文本消息
+
+### 发送消息
+- **发群消息**：`send-text <chat_id> <text>` — 需要机器人在群内
+- **发私聊**：`send-text-user <open_id> <text>` — 需要用户已主动联系过机器人
+- **分享文档**：`send-doc <chat_id> <doc_id>` — 发送文档链接到群
+- **富文本/卡片**：`send-rich <chat_id> '<json>'` — 发送 interactive 格式的卡片消息
+
+**前提条件**：应用需开启机器人能力并发布版本，机器人需被加入目标群组或用户需主动与机器人对话。
 
 ---
 

@@ -188,6 +188,49 @@ def get_best_token():
     return get_tat(), "TAT"
 
 
+# --- Feishu Open API (for messaging, not MCP) ---
+
+OPEN_API = "https://open.feishu.cn/open-apis"
+
+
+def api_call(endpoint, data=None, method="POST", token=None):
+    """Call Feishu Open API directly. Uses TAT by default."""
+    if not token:
+        token = get_tat()
+    url = f"{OPEN_API}/{endpoint}"
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(data).encode() if data else None,
+        headers={
+            "Content-Type": "application/json; charset=utf-8",
+            "Authorization": f"Bearer {token}",
+        },
+        method=method,
+    )
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        return json.loads(e.read().decode())
+
+
+def send_message(receive_id, receive_id_type, msg_type, content):
+    """Send a message via Feishu Open API."""
+    return api_call(f"im/v1/messages?receive_id_type={receive_id_type}", {
+        "receive_id": receive_id,
+        "msg_type": msg_type,
+        "content": content,
+    })
+
+
+def list_chats(page_size=20, page_token=""):
+    """List groups the bot is in."""
+    params = f"page_size={page_size}"
+    if page_token:
+        params += f"&page_token={page_token}"
+    return api_call(f"im/v1/chats?{params}", method="GET")
+
+
 def mcp_call(token, token_type, method, params=None):
     body = {"jsonrpc": "2.0", "id": 1, "method": method}
     if params:
@@ -241,6 +284,13 @@ def main():
         print()
         print("Files:")
         print("  fetch-file <token> [media|whiteboard] Get file/image content")
+        print()
+        print("Messaging (via Open API):")
+        print("  list-chats                           List groups the bot is in")
+        print("  send-text <chat_id> <text>           Send text to group")
+        print("  send-doc <chat_id> <doc_id>          Share document link to group")
+        print("  send-text-user <open_id> <text>      Send text to user (needs bot contact)")
+        print("  send-rich <chat_id> '<content_json>' Send rich/interactive message")
         print()
         print("Advanced:")
         print("  tools                                List all available MCP tools")
@@ -369,6 +419,36 @@ def main():
         if len(sys.argv) >= 4:
             args["type"] = sys.argv[3]
         p(call_tool(token, token_type, "fetch-file", args))
+
+    # --- Messaging (Open API, not MCP) ---
+    elif cmd == "list-chats":
+        p(list_chats())
+
+    elif cmd == "send-text":
+        p(send_message(sys.argv[2], "chat_id", "text",
+                       json.dumps({"text": sys.argv[3]})))
+
+    elif cmd == "send-text-user":
+        p(send_message(sys.argv[2], "open_id", "text",
+                       json.dumps({"text": sys.argv[3]})))
+
+    elif cmd == "send-doc":
+        doc_id = sys.argv[3]
+        # Share doc as interactive card with link
+        card = {
+            "type": "template",
+            "data": {
+                "template_id": "",
+                "template_variable": {}
+            }
+        }
+        # Fallback: send as text with doc link
+        doc_url = f"https://www.feishu.cn/docx/{doc_id}"
+        p(send_message(sys.argv[2], "chat_id", "text",
+                       json.dumps({"text": f"文档分享：{doc_url}"})))
+
+    elif cmd == "send-rich":
+        p(send_message(sys.argv[2], "chat_id", "interactive", sys.argv[3]))
 
     # --- Raw call ---
     elif cmd == "call":
