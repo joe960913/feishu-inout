@@ -130,9 +130,10 @@ python3 ~/.claude/skills/feishu-inout/scripts/feishu_mcp.py login
 
 流程：
 1. 脚本自动打开浏览器跳转飞书授权页面
-2. 用户在浏览器中点击 **授权**
-3. 浏览器显示"授权成功！可以关闭此页面了。"
-4. 终端显示 `UAT saved!` 表示成功
+2. 如果提示"权限不足"，浏览器会**列出具体缺少的权限名称**，去开放平台开通后点"刷新重试"即可，不需要一次性开完所有权限
+3. 用户在浏览器中点击 **授权**
+4. 浏览器显示"授权成功！可以关闭此页面了。"
+5. 终端显示 `UAT saved!` 表示成功
 
 Token 有效期 2 小时，脚本会自动用 refresh_token 续期。如果过期太久，重新运行 `login` 即可。
 
@@ -258,14 +259,21 @@ python3 $S update-doc '{"doc_id":"xxx","mode":"replace_range","selection_by_titl
 1. 运行 `create-doc <title> '<markdown>'` 直接创建带内容的文档
 2. 可指定位置：知识库节点 `wiki_node`、知识空间 `wiki_space`（`my_library` = 个人文档库）、文件夹 `folder_token`
 3. 返回 `doc_id` 和 `doc_url`
+4. **注意**：不指定位置时文档会创建在个人空间根目录，不会出现在飞书"最近访问"列表中。建议指定 `wiki_space: "my_library"` 创建到个人文档库，方便用户在飞书中找到
 
 ### 编辑文档
 优先使用局部更新，避免 overwrite：
 1. `append` — 追加内容到文档末尾
-2. `replace` — 定位并替换指定内容
+2. `replace` — 定位并替换指定内容（用 `开头...结尾` 范围匹配，或精确文本匹配）
 3. `insert-after` / `insert-before` — 在指定位置前后插入
 4. `delete-range` — 删除匹配的内容
 5. `overwrite` — 最后手段，会清空文档重写（丢失图片、评论等）
+
+**按标题定位整个章节**（替换/删除整个章节时特别好用）：
+```bash
+python3 $S call update-doc '{"doc_id":"xxx","mode":"replace_range","selection_by_title":"### 章节标题","markdown":"### 章节标题\n\n替换后的内容"}'
+```
+`selection_by_title` 会自动匹配从该标题到下一个同级标题之间的所有内容。
 
 ### 浏览知识库
 1. 运行 `list-docs` 查看"我的文档库"
