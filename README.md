@@ -35,6 +35,18 @@ Claude Code / Cursor / Codex / OpenCode / OpenClaw — instant Lark cloud doc ac
 - **Paginated Reading** — offset + limit for large documents
 - **Auto Token Refresh** — OAuth tokens refresh automatically, login once and forget
 
+## Who Is This For?
+
+Not just for developers — anyone who uses Lark/Feishu docs can benefit:
+
+- **Product** — generate PRDs, update requirements, sync release notes
+- **Operations** — draft campaign plans, maintain content calendars, update SOPs
+- **Data** — write analysis reports directly to docs, auto-format weekly metrics
+- **Sales** — create proposals, update client records, generate quotes
+- **HR** — draft job descriptions, update onboarding guides, revise policies
+
+If your workflow involves "open Lark → find a doc → edit → notify someone", now it's just one sentence.
+
 ## Supported AI Tools
 
 <table>
