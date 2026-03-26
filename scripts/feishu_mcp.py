@@ -14,7 +14,7 @@ REFRESH_URL = "https://open.feishu.cn/open-apis/authen/v1/oidc/refresh_access_to
 AUTH_URL = "https://open.feishu.cn/open-apis/authen/v1/authorize"
 REDIRECT_URI = "http://localhost:9876/callback"
 TOKEN_FILE = os.path.expanduser("~/.claude/skills/feishu-inout/.uat_token.json")
-ALL_TOOLS = "fetch-doc,search-doc,list-docs,create-doc,update-doc,get-comments,add-comments,search-user,get-user,fetch-file"
+ALL_TOOLS = "fetch-doc,search-doc,list-docs,create-doc,update-doc,get-comments,add-comments,search-user,get-user,fetch-file,send-message,get-messages,get-thread-messages,search-messages"
 
 
 def get_app_id_secret():
@@ -133,7 +133,7 @@ def exchange_code_for_uat(code):
 def oauth_login():
     """Start OAuth2 flow: open browser, catch callback, exchange for UAT."""
     app_id, _ = get_app_id_secret()
-    scopes = "docx:document:readonly search:docs:read wiki:wiki:readonly im:chat:read task:task:read docx:document docx:document:create docx:document:write_only docs:document.media:upload docs:document.media:download wiki:node:read wiki:node:create docs:document.comment:read docs:document.comment:create contact:user:search contact:contact.base:readonly contact:user.base:readonly board:whiteboard:node:read drive:drive"
+    scopes = "docx:document:readonly search:docs:read wiki:wiki:readonly im:chat:read task:task:read docx:document docx:document:create docx:document:write_only docs:document.media:upload docs:document.media:download wiki:node:read wiki:node:create docs:document.comment:read docs:document.comment:create contact:user:search contact:contact.base:readonly contact:user.base:readonly board:whiteboard:node:read drive:drive im:message:send_as_bot im:message im:chat search:message im:message.send_as_user im:message.p2p_msg:get_as_user"
     auth_url = f"{AUTH_URL}?app_id={app_id}&redirect_uri={REDIRECT_URI}&state=feishu_inout&scope={scopes}"
 
     captured = {}
@@ -246,8 +246,15 @@ def mcp_call(token, token_type, method, params=None):
         },
         method="POST",
     )
-    with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read().decode())
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()
+        try:
+            return json.loads(body)
+        except Exception:
+            return {"error": f"HTTP {e.code}: {body[:500]}"}
 
 
 def call_tool(token, token_type, tool_name, arguments):
@@ -285,12 +292,14 @@ def main():
         print("Files:")
         print("  fetch-file <token> [media|whiteboard] Get file/image content")
         print()
-        print("Messaging (via Open API):")
-        print("  list-chats                           List groups the bot is in")
-        print("  send-text <chat_id> <text>           Send text to group")
-        print("  send-doc <chat_id> <doc_id>          Share document link to group")
-        print("  send-text-user <open_id> <text>      Send text to user (needs bot contact)")
-        print("  send-rich <chat_id> '<content_json>' Send rich/interactive message")
+        print("Messaging (via MCP):")
+        print("  send-msg <chat_id|open_id> <text> [--user]  Send markdown message")
+        print("  send-card <chat_id|open_id> '<json>' [--user] Send interactive card")
+        print("  reply <message_id> <text> [--thread]  Reply to a message")
+        print("  get-msgs <chat_id> [time] [count]    Get chat history (time: today/yesterday/this_week/last_3_days)")
+        print("  get-msgs-user <open_id> [time] [count] Get DM history")
+        print("  search-msgs <keyword> [time]         Search messages across chats")
+        print("  get-thread <thread_id>               Get thread replies")
         print()
         print("Advanced:")
         print("  tools                                List all available MCP tools")
@@ -420,35 +429,58 @@ def main():
             args["type"] = sys.argv[3]
         p(call_tool(token, token_type, "fetch-file", args))
 
-    # --- Messaging (Open API, not MCP) ---
-    elif cmd == "list-chats":
-        p(list_chats())
+    # --- Messaging (via MCP) ---
+    elif cmd == "send-msg":
+        # send-msg <receive_id> <text> [--user]
+        is_user = "--user" in sys.argv
+        args = {"receive_id": sys.argv[2], "msg_type": "normal", "content": sys.argv[3],
+                "receive_id_type": "user" if is_user else "chat"}
+        p(call_tool(token, token_type, "send-message", args))
 
-    elif cmd == "send-text":
-        p(send_message(sys.argv[2], "chat_id", "text",
-                       json.dumps({"text": sys.argv[3]})))
+    elif cmd == "send-card":
+        # send-card <receive_id> '<json>' [--user]
+        is_user = "--user" in sys.argv
+        args = {"receive_id": sys.argv[2], "msg_type": "interactive", "content": sys.argv[3],
+                "receive_id_type": "user" if is_user else "chat"}
+        p(call_tool(token, token_type, "send-message", args))
 
-    elif cmd == "send-text-user":
-        p(send_message(sys.argv[2], "open_id", "text",
-                       json.dumps({"text": sys.argv[3]})))
+    elif cmd == "reply":
+        # reply <message_id> <text> [--thread]
+        is_thread = "--thread" in sys.argv
+        args = {"msg_type": "normal", "content": sys.argv[3],
+                "reply_to_message_id": sys.argv[2]}
+        if is_thread:
+            args["reply_in_thread"] = True
+        p(call_tool(token, token_type, "send-message", args))
 
-    elif cmd == "send-doc":
-        doc_id = sys.argv[3]
-        # Share doc as interactive card with link
-        card = {
-            "type": "template",
-            "data": {
-                "template_id": "",
-                "template_variable": {}
-            }
-        }
-        # Fallback: send as text with doc link
-        doc_url = f"https://www.feishu.cn/docx/{doc_id}"
-        p(send_message(sys.argv[2], "chat_id", "text",
-                       json.dumps({"text": f"文档分享：{doc_url}"})))
+    elif cmd == "get-msgs":
+        # get-msgs <chat_id> [relative_time] [page_size]
+        args = {"chat_id": sys.argv[2]}
+        if len(sys.argv) >= 4:
+            args["relative_time"] = sys.argv[3]
+        if len(sys.argv) >= 5:
+            args["page_size"] = int(sys.argv[4])
+        p(call_tool(token, token_type, "get-messages", args))
 
-    elif cmd == "send-rich":
-        p(send_message(sys.argv[2], "chat_id", "interactive", sys.argv[3]))
+    elif cmd == "get-msgs-user":
+        # get-msgs-user <open_id> [relative_time] [page_size]
+        args = {"open_id": sys.argv[2]}
+        if len(sys.argv) >= 4:
+            args["relative_time"] = sys.argv[3]
+        if len(sys.argv) >= 5:
+            args["page_size"] = int(sys.argv[4])
+        p(call_tool(token, token_type, "get-messages", args))
+
+    elif cmd == "search-msgs":
+        # search-msgs <query> [relative_time]
+        args = {"query": sys.argv[2]}
+        if len(sys.argv) >= 4:
+            args["relative_time"] = sys.argv[3]
+        p(call_tool(token, token_type, "search-messages", args))
+
+    elif cmd == "get-thread":
+        # get-thread <thread_id>
+        p(call_tool(token, token_type, "get-thread-messages", {"thread_id": sys.argv[2]}))
 
     # --- Raw call ---
     elif cmd == "call":

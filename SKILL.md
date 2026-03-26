@@ -1,12 +1,12 @@
 ---
 name: feishu-inout
 description: |
-  Read/write Feishu/Lark cloud documents via the official Remote MCP service. Works with Claude Code, Cursor, Codex, OpenCode, OpenClaw, and other AI coding agents. Trigger this skill when the user mentions Feishu, Lark, cloud docs, read/search/create documents, or provides a Feishu/Lark document URL.
+  Read/write Feishu/Lark cloud documents and send/search messages via the official Remote MCP service. Works with Claude Code, Cursor, Codex, OpenCode, OpenClaw, and other AI coding agents. Trigger this skill when the user mentions Feishu, Lark, cloud docs, read/search/create documents, messaging, sending messages, or provides a Feishu/Lark document URL.
 ---
 
-# Feishu InOut - Feishu/Lark Document Operations
+# Feishu InOut - Feishu/Lark Document & Messaging Operations
 
-Operate cloud documents via the official Feishu/Lark Remote MCP service (`https://mcp.feishu.cn/mcp`). Zero dependencies, pure Python.
+Operate cloud documents and send/search messages via the official Feishu/Lark Remote MCP service (`https://mcp.feishu.cn/mcp`). Zero dependencies, pure Python.
 
 ## Security: Credential Handling Rules
 
@@ -34,9 +34,9 @@ Before starting, ask the user:
 > Which features do you need?
 > 1. **Read-only** (search, read, browse) — minimal permissions, fastest setup
 > 2. **Read & write** (+ create, edit, comments) — recommended, covers most scenarios
-> 3. **All features** (+ send messages to groups/DMs) — requires enabling bot capability and publishing an app version
+> 3. **All features** (+ send/search messages in groups/DMs) — messaging uses MCP with user identity (UAT), bot capability is optional
 
-Based on the user's choice, show the matching permission string in Step 2 and decide whether to guide bot setup in Step 6.
+Based on the user's choice, show the matching permission string in Step 2. Note that Step 6 (bot capability) is optional for all choices.
 
 **You MUST show the corresponding permission string for the user's choice:**
 
@@ -52,7 +52,7 @@ docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:tas
 
 Choice 3 (all features):
 ```
-docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read,docx:document,docx:document:create,docx:document:write_only,docs:document.media:upload,docs:document.media:download,wiki:node:read,wiki:node:create,docs:document.comment:read,docs:document.comment:create,contact:user:search,contact:contact.base:readonly,contact:user.base:readonly,board:whiteboard:node:read,drive:drive,im:message:send_as_bot,im:message,im:message:send
+docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read,docx:document,docx:document:create,docx:document:write_only,docs:document.media:upload,docs:document.media:download,wiki:node:read,wiki:node:create,docs:document.comment:read,docs:document.comment:create,contact:user:search,contact:contact.base:readonly,contact:user.base:readonly,board:whiteboard:node:read,drive:drive,im:message,im:message:send_as_bot,im:chat,search:message,im:message.send_as_user,im:message.p2p_msg:get_as_user
 ```
 
 Guide the user to paste the string in the open platform → Permission Management → **Batch Import/Export**.
@@ -121,15 +121,18 @@ Or enable individually:
 | `board:whiteboard:node:read` | View whiteboards | App |
 | `drive:drive` | Manage drive files | App |
 
-**Messaging (send-text, send-doc, list-chats):**
+**Messaging (send-msg, reply, get-msgs, search-msgs, etc.):**
 
 | Scope | Description | Auth Type |
 |-------|-------------|-----------|
-| `im:message:send_as_bot` | Send as bot | App |
 | `im:message` | Manage messages | App |
-| `im:message:send` | Send messages | App |
+| `im:message:send_as_bot` | Send as bot | App |
+| `im:chat` | Manage chats | App |
+| `search:message` | Search messages | User (needs approval) |
+| `im:message.send_as_user` | Send as user | User (needs approval) |
+| `im:message.p2p_msg:get_as_user` | Read DM history | User (needs approval) |
 
-**Note**: Messaging permissions only need to be enabled if the user chose "All features". Also requires completing Step 6 (bot capability).
+**Note**: Messaging permissions only need to be enabled if the user chose "All features". Messaging goes through the official MCP using UAT (user identity) -- bot capability is optional, not required.
 
 After enabling, "User" type permissions showing "consistent with user scope" is normal. "App" type showing "-" is also normal.
 
@@ -191,22 +194,17 @@ python3 ~/.claude/skills/feishu-inout/scripts/feishu_mcp.py whoami
 python3 ~/.claude/skills/feishu-inout/scripts/feishu_mcp.py search-doc "test"
 ```
 
-### Step 6: Enable Bot Capability (only if "All features" was chosen)
+### Step 6: Bot Capability (optional)
 
-If the user chose "All features" (needs messaging), guide these steps:
+Messaging via MCP uses UAT (user identity), so **bot capability is NOT required** for sending or reading messages. The `send-message` MCP tool sends messages as the authenticated user, not as a bot.
+
+However, if the user wants a bot identity (e.g., to send automated notifications as a bot), they can optionally enable it:
 
 1. Go to the app → **Add Capabilities** → Enable **Bot**
 2. Go to **Version Management & Release** → Create version → Submit for approval
-3. After approval, **add the bot to target groups** so it can send messages
-4. For DMs, the target user must **search for the app name in Feishu/Lark and open a conversation with the bot first**
+3. After approval, add the bot to target groups
 
-Verify the bot is working:
-```bash
-python3 ~/.claude/skills/feishu-inout/scripts/feishu_mcp.py list-chats
-```
-If it returns a group list, the bot is active and has joined groups.
-
-If the user didn't choose "All features", skip this step and let them know they can configure it later if needed.
+This step is entirely optional. If the user only needs to send messages as themselves, skip it.
 
 ---
 
@@ -294,12 +292,14 @@ python3 $S add-comments <docID> <text>             # Add a text comment
 python3 $S fetch-file <token>                      # Get file/image content
 python3 $S fetch-file <token> whiteboard           # Get whiteboard content
 
-# Messaging (via Open API, requires bot capability)
-python3 $S list-chats                              # List groups the bot is in
-python3 $S send-text <chat_id> <text>              # Send text to group
-python3 $S send-doc <chat_id> <doc_id>             # Share doc link to group
-python3 $S send-text-user <open_id> <text>         # Send text to user (needs bot contact)
-python3 $S send-rich <chat_id> '<interactive_json>' # Send rich/card message
+# Messaging (via MCP)
+python3 $S send-msg <chat_id|open_id> <text> [--user]  # Send markdown message
+python3 $S send-card <chat_id|open_id> '<json>' [--user] # Send interactive card
+python3 $S reply <message_id> <text> [--thread]    # Reply to a message
+python3 $S get-msgs <chat_id> [time] [count]       # Get group chat history
+python3 $S get-msgs-user <open_id> [time] [count]  # Get DM history
+python3 $S search-msgs <keyword> [time]            # Search messages across chats
+python3 $S get-thread <thread_id>                  # Get thread replies
 
 # Advanced (raw JSON call to any tool)
 python3 $S call <toolName> '<jsonArgs>'
@@ -359,17 +359,30 @@ python3 $S call update-doc '{"doc_id":"xxx","mode":"replace_range","selection_by
 
 ### Create Doc and Send to Group Chat
 1. Run `create-doc <title> '<markdown>'` to create the doc
-2. Run `list-chats` to see groups the bot is in, get the `chat_id`
-3. Run `send-doc <chat_id> <doc_id>` to share the doc to the group
-4. To @mention: first `search-user` to get open_id, then use `send-rich` to send a rich message with mentions
+2. Run `send-msg <chat_id> <text>` to share the doc link to the group (include the doc URL in the text)
+3. To @mention: use `<mention-user id="openId"/>` syntax in the message text (first `search-user` to get open_id)
 
 ### Send Messages
-- **Group message**: `send-text <chat_id> <text>` — bot must be in the group
-- **DM**: `send-text-user <open_id> <text>` — user must have contacted the bot first
-- **Share doc**: `send-doc <chat_id> <doc_id>` — send doc link to group
-- **Rich/card**: `send-rich <chat_id> '<json>'` — send interactive card message
+Messages go through the official Feishu/Lark MCP using UAT (user identity) -- no bot capability needed.
 
-**Prerequisites**: App must have bot capability enabled and a published version. Bot must be added to the target group, or the user must have opened a conversation with the bot.
+- **Group message**: `send-msg <chat_id> <text>` -- sends as the authenticated user
+- **DM**: `send-msg <open_id> <text> --user` -- send to a user by open_id
+- **Interactive card**: `send-card <chat_id|open_id> '<json>' [--user]` -- send a card message
+- **Reply**: `reply <message_id> <text>` -- reply to a specific message
+- **Reply in thread**: `reply <message_id> <text> --thread` -- reply within a thread
+- **Group history**: `get-msgs <chat_id> [time] [count]` -- get chat history with time filter
+- **DM history**: `get-msgs-user <open_id> [time] [count]` -- read DM history
+- **Search**: `search-msgs <keyword> [time]` -- search messages across all chats
+- **Thread replies**: `get-thread <thread_id>` -- get all replies in a thread
+
+**Markdown formatting**: `send-msg` supports Markdown syntax in message text.
+
+**@mention syntax**:
+- Mention a specific user: `<mention-user id="openId"/>`
+- Mention everyone: `<mention-user id="all"/>`
+- Emoji support: `[SMILE]`, `[THUMBSUP]`, etc.
+
+**Time filters** for `get-msgs`, `get-msgs-user`, `search-msgs`: `today`, `yesterday`, `this_week`, `last_week`, `this_month`, `last_month`, `last_30_minutes`, `last_3_days`, etc.
 
 ---
 

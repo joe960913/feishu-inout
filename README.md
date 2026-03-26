@@ -17,16 +17,16 @@ Claude Code / Cursor / Codex / OpenCode / OpenClaw — instant Lark cloud doc ac
 
 ---
 
-> **Search, read, create, edit, append, replace, insert, delete, send messages** — do everything with Lark docs and messaging from your AI coding agent.
+> **Search, read, create, edit, append, replace, insert, delete, send/read/search messages** — do everything with Lark docs and messaging from your AI coding agent.
 >
-> Built on Lark's official Remote MCP service + Open API. Zero dependencies, single file, works out of the box.
+> Built on Lark's official Remote MCP service. Zero dependencies, single file, works out of the box.
 
 ## Highlights
 
 - **Search Documents** — by keyword, author, time range
 - **7 Edit Modes** — append, overwrite, replace range, replace all, insert before/after, delete — precise edits without data loss
 - **One-Step Create** — title + Markdown content in one call, with wiki/folder targeting
-- **Send to Group Chat** — share docs to groups, send text, doc links, or rich cards
+- **Full Messaging** — send, read, reply, and search messages across DMs and groups, with Markdown, @mentions, and emoji
 - **Zero Dependencies** — pure Python stdlib, no Node.js, no local MCP server
 - **Comment Management** — view whole-doc and inline comments, add comments with @mentions
 - **User Search** — find colleagues' open_id for @mentions
@@ -96,7 +96,7 @@ Go to [Lark Open Platform](https://open.larksuite.com/app) ([China: open.feishu.
 Go to your app → Permission Management → **Batch Import/Export** and paste:
 
 ```
-docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read,docx:document,docx:document:create,docx:document:write_only,docs:document.media:upload,docs:document.media:download,wiki:node:read,wiki:node:create,docs:document.comment:read,docs:document.comment:create,contact:user:search,contact:contact.base:readonly,contact:user.base:readonly,board:whiteboard:node:read,drive:drive,im:message:send_as_bot,im:message,im:message:send
+docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read,docx:document,docx:document:create,docx:document:write_only,docs:document.media:upload,docs:document.media:download,wiki:node:read,wiki:node:create,docs:document.comment:read,docs:document.comment:create,contact:user:search,contact:contact.base:readonly,contact:user.base:readonly,board:whiteboard:node:read,drive:drive,im:message,im:message:send_as_bot,im:chat,search:message,im:message.send_as_user,im:message.p2p_msg:get_as_user
 ```
 
 <details>
@@ -140,9 +140,12 @@ docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:tas
 
 | Scope | Description |
 |-------|-------------|
-| `im:message:send_as_bot` | Send as bot |
 | `im:message` | Manage messages |
-| `im:message:send` | Send messages |
+| `im:message:send_as_bot` | Send as bot |
+| `im:chat` | Access chat list |
+| `search:message` | Search messages |
+| `im:message.send_as_user` | Send messages as user |
+| `im:message.p2p_msg:get_as_user` | Read DM messages as user |
 
 </details>
 
@@ -186,16 +189,11 @@ AI:  Running OAuth login...
 
 Tokens auto-refresh. No need to log in repeatedly.
 
-### 6. Enable Bot (for messaging only)
+### 6. Messaging (no bot required)
 
-If you need to **send messages to groups or users**:
+Messaging now goes through the official Lark Remote MCP using **your user identity (UAT)** — no bot capability needed. After logging in (Step 5), you can send, read, reply to, and search messages directly as yourself.
 
-1. App → **Add Capabilities** → Enable **Bot**
-2. **Version Management** → Create version → Submit for approval
-3. After approval, **add the bot to target groups**
-4. For DMs, users must **open a conversation with the bot first**
-
-> Skip this step if you don't need messaging. Document operations work without it.
+> Bot capability is **not required** for messaging. All messages are sent and read under your own Lark identity.
 
 ## Usage Examples
 
@@ -244,7 +242,37 @@ You: Replace all "TBD" with "Confirmed" in that doc
 AI:  Replaced 3 occurrences.
 ```
 
-### Send to Group Chat
+### Messaging — Send, Read, Search, Reply
+
+```
+You: What did the product team discuss today?
+
+AI:  Reading today's messages from "Product Team" group...
+     1. David (10:30): API v2 migration is done
+     2. Sarah (11:15): QA passed, ready for staging
+     3. Mike (14:22): Deployed to production
+```
+
+```
+You: Send David a message: the API changes are deployed
+
+AI:  Message sent to David (as you).
+```
+
+```
+You: Search for messages about "deployment" this week
+
+AI:  Found 5 messages across 3 chats:
+     - "Engineering" — David: "deployment pipeline updated" (Mon)
+     - "Product Team" — Sarah: "deployment checklist reviewed" (Tue)
+     ...
+```
+
+```
+You: Reply to Mike's message: great work, thanks!
+
+AI:  Reply sent in thread under Mike's message.
+```
 
 ```
 You: Share that doc to the product team group
@@ -252,11 +280,7 @@ You: Share that doc to the product team group
 AI:  Document "Q2 Product Roadmap" shared to "Product Team" group.
 ```
 
-```
-You: Send a message to the engineering group: today's build is deployed
-
-AI:  Message sent to "Engineering" group.
-```
+> Messages support Markdown formatting, @mentions via `<mention-user id="openId"/>`, @all via `<mention-user id="all"/>`, and emoji like `[SMILE]`.
 
 ### More Scenarios
 
@@ -265,6 +289,7 @@ You: Find David's open_id so I can @ him in the doc
 You: Download the images from that document
 You: Browse the "Product Docs" wiki and list sub-pages
 You: Write the test results to a Lark doc and share it in the dev group
+You: What did Sarah say yesterday in the engineering group?
 ```
 
 ---
@@ -275,6 +300,7 @@ You: Write the test results to a Lark doc and share it in the dev group
 ```bash
 S=scripts/feishu_mcp.py
 
+# Documents
 python3 $S search-doc "weekly report"                            # Search
 python3 $S fetch-doc ABC123def                                   # Read
 python3 $S list-docs                                             # My Library
@@ -286,10 +312,16 @@ python3 $S delete-range ABC123def "content to delete"            # Delete
 python3 $S get-comments ABC123def                                # Comments
 python3 $S search-user "David"                                   # Search user
 python3 $S fetch-file filetoken123                               # Get file
+
+# Messaging
 python3 $S list-chats                                            # List groups
 python3 $S send-text oc_xxx "message"                            # Send to group
 python3 $S send-doc oc_xxx ABC123def                             # Share doc
 python3 $S send-text-user ou_xxx "message"                       # DM user
+python3 $S read-messages oc_xxx --time today                     # Read today's messages
+python3 $S read-messages ou_xxx --time last_3_days               # Read recent DMs
+python3 $S search-messages "deployment"                          # Search messages
+python3 $S reply-message om_xxx "thanks!"                        # Reply to a message
 ```
 
 </details>
@@ -297,14 +329,15 @@ python3 $S send-text-user ou_xxx "message"                       # DM user
 ## How It Works
 
 ```
-AI Agent ──► feishu_mcp.py ──► mcp.feishu.cn/mcp ──► Lark Cloud Docs
-               │                    (Official MCP)
+                                                    ┌─► Lark Cloud Docs
+AI Agent ──► feishu_mcp.py ──► mcp.feishu.cn/mcp ──┤
+               │                    (Official MCP)  └─► Lark Messaging
                ├─ Auto TAT/UAT auth
                ├─ JSON-RPC 2.0
                └─ Single file, zero deps
 ```
 
-Calls Lark's official Remote MCP service directly. No local MCP server, no Node.js — one Python script handles everything.
+Calls Lark's official Remote MCP service directly for both documents and messaging. No local MCP server, no Node.js, no bot required — one Python script handles everything.
 
 ## FAQ
 
