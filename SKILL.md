@@ -33,7 +33,7 @@ description: |
    - **App ID**（格式：`cli_xxxxxxxxxxxxxxxx`）
    - **App Secret**（一串字母数字）
 
-告诉用户：把这两个值给我，我帮你配置环境变量。
+提醒用户自行将这两个值设置为环境变量（见第 4 步），不要将 App Secret 直接发送给 AI 或粘贴到对话中。
 
 ### 第 2 步：开通 API 权限
 
@@ -99,15 +99,17 @@ http://localhost:9876/callback
 
 ### 第 4 步：设置环境变量
 
-将 App ID 和 App Secret 写入 shell 配置文件（`~/.zshrc` 或 `~/.bashrc`）：
+指导用户自行将凭证写入 shell 配置文件。**不要让用户把 App Secret 发给你，也不要在对话中输出或回显凭证值。**
+
+告诉用户执行以下命令（自行替换实际值）：
 
 ```bash
-# Feishu MCP
-export FEISHU_APP_ID="cli_xxxxxxxxxxxxxxxx"
-export FEISHU_APP_SECRET="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+echo 'export FEISHU_APP_ID="你的AppID"' >> ~/.zshrc
+echo 'export FEISHU_APP_SECRET="你的AppSecret"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
-写入后提醒用户执行 `source ~/.zshrc` 或重启终端使其生效。
+设置完成后，通过 `echo $FEISHU_APP_ID` 验证是否生效（仅验证 App ID，不要输出 Secret）。
 
 ### 第 5 步：OAuth 登录获取 UAT
 
