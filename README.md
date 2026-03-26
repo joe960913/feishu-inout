@@ -4,22 +4,22 @@
 
 # feishu-inout
 
-**One command to connect your AI coding agent to Feishu/Lark documents**
+**One command to connect your AI coding agent to Lark (Feishu) documents**
 
-Claude Code / Cursor / Codex / OpenCode / OpenClaw — instant Feishu cloud doc access
+Claude Code / Cursor / Codex / OpenCode / OpenClaw — instant Lark cloud doc access
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.6+](https://img.shields.io/badge/Python-3.6+-green.svg)](https://python.org)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-0-brightgreen.svg)](#)
-[![Feishu Official MCP](https://img.shields.io/badge/Feishu-Official%20MCP-4f46e5.svg)](https://mcp.feishu.cn)
+[![Lark Official MCP](https://img.shields.io/badge/Lark-Official%20MCP-4f46e5.svg)](https://mcp.feishu.cn)
 
 </div>
 
 ---
 
-> **Search, read, create, edit, append, replace, insert, delete, send messages** — do everything with Feishu docs and messaging from your AI coding agent.
+> **Search, read, create, edit, append, replace, insert, delete, send messages** — do everything with Lark docs and messaging from your AI coding agent.
 >
-> Built on Feishu's official Remote MCP service + Open API. Zero dependencies, single file, works out of the box.
+> Built on Lark's official Remote MCP service + Open API. Zero dependencies, single file, works out of the box.
 
 ## Highlights
 
@@ -75,9 +75,9 @@ npx skills add joe960913/feishu-inout
 
 ## Quick Start (5 min)
 
-### 1. Create a Feishu App
+### 1. Create a Lark App
 
-Go to [Feishu Open Platform](https://open.feishu.cn/app) → Create a custom app → Note your **App ID** and **App Secret**
+Go to [Lark Open Platform](https://open.larksuite.com/app) ([China: open.feishu.cn](https://open.feishu.cn/app)) → Create a custom app → Note your **App ID** and **App Secret**
 
 ### 2. Enable Permissions
 
@@ -165,11 +165,11 @@ source ~/.zshrc
 Tell your AI agent to log in:
 
 ```
-You: Log in to Feishu
+You: Log in to Lark
 
 AI:  Running OAuth login...
      Browser opened, please authorize ✓
-     UAT saved! You can now access your Feishu docs.
+     UAT saved! You can now access your Lark docs.
 ```
 
 Tokens auto-refresh. No need to log in repeatedly.
@@ -192,7 +192,7 @@ After setup, **just talk to your AI agent naturally**:
 ### Search and Browse
 
 ```
-You: What Feishu docs do I have?
+You: What Lark docs do I have?
 
 AI:  Found 20 documents:
      1. Q2 Product Roadmap — Wang Ming (3/25)
@@ -204,7 +204,7 @@ AI:  Found 20 documents:
 ### Read Documents
 
 ```
-You: Read this Feishu doc https://xxx.feishu.cn/wiki/ABC123def
+You: Read this doc https://xxx.larksuite.com/wiki/ABC123def
 
 AI:  ## Frontend Refactor Plan
      ### Goals
@@ -219,10 +219,10 @@ AI:  ## Frontend Refactor Plan
 ### Create and Edit
 
 ```
-You: Create a Feishu doc called "Q2 Product Roadmap" with an outline
+You: Create a Lark doc called "Q2 Product Roadmap" with an outline
 
 AI:  Document created!
-     Link: https://xxx.feishu.cn/docx/xxx
+     Link: https://xxx.larksuite.com/docx/xxx
      Outline written: Goals, Timeline, Milestones, Resources
 ```
 
@@ -252,7 +252,7 @@ AI:  Message sent to "Engineering" group.
 You: Find David's open_id so I can @ him in the doc
 You: Download the images from that document
 You: Browse the "Product Docs" wiki and list sub-pages
-You: Write the test results to a Feishu doc and share it in the dev group
+You: Write the test results to a Lark doc and share it in the dev group
 ```
 
 ---
@@ -285,14 +285,14 @@ python3 $S send-text-user ou_xxx "message"                       # DM user
 ## How It Works
 
 ```
-AI Agent ──► feishu_mcp.py ──► mcp.feishu.cn/mcp ──► Feishu Cloud Docs
+AI Agent ──► feishu_mcp.py ──► mcp.feishu.cn/mcp ──► Lark Cloud Docs
                │                    (Official MCP)
                ├─ Auto TAT/UAT auth
                ├─ JSON-RPC 2.0
                └─ Single file, zero deps
 ```
 
-Calls Feishu's official Remote MCP service directly. No local MCP server, no Node.js — one Python script handles everything.
+Calls Lark's official Remote MCP service directly. No local MCP server, no Node.js — one Python script handles everything.
 
 ## FAQ
 
@@ -323,7 +323,7 @@ Tokens auto-refresh via refresh_token. If the refresh_token also expires (30 day
 ## Security
 
 - **Credentials** — App Secret is passed via environment variables, never exposed in conversations
-- **Official Service** — All API calls go through Feishu's official MCP service (`mcp.feishu.cn`)
+- **Official Service** — All API calls go through Lark's official MCP service (`mcp.feishu.cn`)
 - **Local Tokens** — OAuth tokens stored locally, never uploaded to external services
 - **Third-party Content** — Document content comes from docs you have access to; be aware of potentially untrusted content
 
