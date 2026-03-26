@@ -28,7 +28,26 @@ description: |
 > 2. **读写文档**（+ 创建、编辑、评论）— 推荐，覆盖大部分场景
 > 3. **全部功能**（+ 发消息到群聊/私聊）— 需要额外开启机器人能力并发布应用版本
 
-根据用户选择，在第 2 步引导对应的权限范围，在第 6 步决定是否引导机器人配置。
+根据用户选择，在第 2 步展示对应的权限字符串（用逗号分隔，方便复制粘贴批量导入），在第 6 步决定是否引导机器人配置。
+
+**必须按用户选择展示对应的权限字符串：**
+
+选择 1（只读文档）：
+```
+docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read
+```
+
+选择 2（读写文档，推荐）：
+```
+docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read,docx:document,docx:document:create,docx:document:write_only,docs:document.media:upload,docs:document.media:download,wiki:node:read,wiki:node:create,docs:document.comment:read,docs:document.comment:create,contact:user:search,contact:contact.base:readonly,contact:user.base:readonly,board:whiteboard:node:read,drive:drive
+```
+
+选择 3（全部功能）：
+```
+docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read,docx:document,docx:document:create,docx:document:write_only,docs:document.media:upload,docs:document.media:download,wiki:node:read,wiki:node:create,docs:document.comment:read,docs:document.comment:create,contact:user:search,contact:contact.base:readonly,contact:user.base:readonly,board:whiteboard:node:read,drive:drive,im:message:send_as_bot,im:message,im:message:send
+```
+
+引导用户在飞书开放平台 → 权限管理 → **批量导入/导出权限** 中粘贴对应字符串。
 
 分 6 步，引导用户逐步完成。每步完成后确认再进入下一步。
 
