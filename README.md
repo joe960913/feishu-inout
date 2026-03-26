@@ -78,10 +78,16 @@ npx skills add joe960913/feishu-inout
 
 ### 2. 开通权限
 
-进入应用 → 权限管理 → 搜索并开通以下权限：
+进入应用 → 权限管理 → **批量导入/导出权限**，粘贴以下内容一键导入：
+
+```
+docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read,docx:document,docx:document:create,docx:document:write_only,docs:document.media:upload,docs:document.media:download,wiki:node:read,wiki:node:create,docs:document.comment:read,docs:document.comment:create,contact:user:search,contact:contact.base:readonly,contact:user.base:readonly,board:whiteboard:node:read,drive:drive
+```
 
 <details>
-<summary><b>基础权限（必须）</b></summary>
+<summary><b>或者逐个搜索开通（点击展开查看完整列表）</b></summary>
+
+#### 基础权限（必须）
 
 | 权限 scope | 名称 |
 |-----------|------|
@@ -91,10 +97,7 @@ npx skills add joe960913/feishu-inout
 | `im:chat:read` | 查看群信息 |
 | `task:task:read` | 查看任务信息 |
 
-</details>
-
-<details>
-<summary><b>写入权限（编辑文档需要）</b></summary>
+#### 写入权限（编辑文档需要）
 
 | 权限 scope | 名称 |
 |-----------|------|
@@ -105,10 +108,7 @@ npx skills add joe960913/feishu-inout
 | `wiki:node:read` | 查看知识库节点 |
 | `wiki:node:create` | 创建知识库节点 |
 
-</details>
-
-<details>
-<summary><b>评论 / 用户 / 文件权限（可选）</b></summary>
+#### 评论 / 用户 / 文件权限（可选）
 
 | 权限 scope | 名称 |
 |-----------|------|
