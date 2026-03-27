@@ -99,7 +99,7 @@ Go to [Lark Open Platform](https://open.larksuite.com/app) ([China: open.feishu.
 Go to your app → Permission Management → **Batch Import/Export** and paste:
 
 ```
-docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read,docx:document,docx:document:create,docx:document:write_only,docs:document.media:upload,docs:document.media:download,wiki:node:read,wiki:node:create,docs:document.comment:read,docs:document.comment:create,contact:user:search,contact:contact.base:readonly,contact:user.base:readonly,board:whiteboard:node:read,drive:drive,im:message,im:message:send_as_bot,im:chat,search:message,im:message.send_as_user,im:message.p2p_msg:get_as_user,calendar:calendar:readonly,calendar:calendar,bitable:app:readonly,bitable:app,im:chat:create
+docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:task:read,docx:document,docx:document:create,docx:document:write_only,docs:document.media:upload,docs:document.media:download,wiki:node:read,wiki:node:create,docs:document.comment:read,docs:document.comment:create,contact:user:search,contact:contact.base:readonly,contact:user.base:readonly,board:whiteboard:node:read,drive:drive,im:message,im:message:send_as_bot,im:chat,search:message,im:message.send_as_user,im:message.p2p_msg:get_as_user,im:message.group_msg:get_as_user,calendar:calendar:readonly,calendar:calendar,bitable:app:readonly,bitable:app,im:chat:create
 ```
 
 <details>
@@ -149,6 +149,7 @@ docx:document:readonly,search:docs:read,wiki:wiki:readonly,im:chat:read,task:tas
 | `search:message` | Search messages |
 | `im:message.send_as_user` | Send messages as user |
 | `im:message.p2p_msg:get_as_user` | Read DM messages as user |
+| `im:message.group_msg:get_as_user` | Read group chat messages as user |
 
 #### Calendar (optional)
 
@@ -370,29 +371,30 @@ python3 $S search-user "David"                                   # Search user
 python3 $S fetch-file filetoken123                               # Get file
 
 # Messaging
-python3 $S list-chats                                            # List groups
-python3 $S send-text oc_xxx "message"                            # Send to group
-python3 $S send-doc oc_xxx ABC123def                             # Share doc
-python3 $S send-text-user ou_xxx "message"                       # DM user
-python3 $S read-messages oc_xxx --time today                     # Read today's messages
-python3 $S read-messages ou_xxx --time last_3_days               # Read recent DMs
-python3 $S search-messages "deployment"                          # Search messages
-python3 $S reply-message om_xxx "thanks!"                        # Reply to a message
+python3 $S list-groups                                           # List groups
+python3 $S send-msg oc_xxx "message"                             # Send to group
+python3 $S send-msg ou_xxx "message" --user                      # DM user
+python3 $S send-card oc_xxx '{"type":"template","data":{}}' # Send interactive card
+python3 $S get-msgs oc_xxx today                                 # Read today's messages
+python3 $S get-msgs-user ou_xxx last_3_days                      # Read recent DMs
+python3 $S search-msgs "deployment"                              # Search messages
+python3 $S reply om_xxx "thanks!"                                # Reply to a message
+python3 $S get-thread thread_xxx                                 # Get thread replies
 
 # Calendar
 python3 $S list-events                                           # Today's events
-python3 $S create-event "Sprint Review" "2026-03-27T14:00" "2026-03-27T15:00"  # Create event
-python3 $S create-event "Demo" "2026-03-28T10:00" "2026-03-28T11:00" --vc     # With video meeting
+python3 $S create-event "Sprint Review" "2026-03-27T14:00" "2026-03-27T15:00"  # All events include video meeting auto
+python3 $S create-event "Demo" "2026-03-28T10:00" "2026-03-28T11:00"          # All events include video meeting auto
 
 # Bitable
-python3 $S list-bitable-records appToken tableId                 # List records
-python3 $S create-bitable-record appToken tableId '{"Task":"Fix bug"}'  # Create record
-python3 $S update-bitable-record appToken tableId recordId '{"Status":"Done"}'  # Update record
+python3 $S list-tables appToken                                  # List tables in a bitable app
+python3 $S list-records appToken tableId                         # List records
+python3 $S create-record appToken tableId '{"Task":"Fix bug"}'   # Create record
+python3 $S update-record appToken tableId recordId '{"Status":"Done"}'  # Update record
 
 # Group Management
 python3 $S create-group "Project Team"                           # Create group
-python3 $S add-group-members oc_xxx ou_xxx1,ou_xxx2              # Add members
-python3 $S list-group-members oc_xxx                             # List members
+python3 $S add-members oc_xxx '["ou_xxx1","ou_xxx2"]'            # Add members
 ```
 
 </details>
