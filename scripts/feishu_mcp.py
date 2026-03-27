@@ -134,7 +134,7 @@ def exchange_code_for_uat(code):
 def oauth_login():
     """Start OAuth2 flow: open browser, catch callback, exchange for UAT."""
     app_id, _ = get_app_id_secret()
-    scopes = "docx:document:readonly search:docs:read wiki:wiki:readonly im:chat:read task:task:read docx:document docx:document:create docx:document:write_only docs:document.media:upload docs:document.media:download wiki:node:read wiki:node:create docs:document.comment:read docs:document.comment:create contact:user:search contact:contact.base:readonly contact:user.base:readonly board:whiteboard:node:read drive:drive im:message:send_as_bot im:message im:chat search:message im:message.send_as_user im:message.p2p_msg:get_as_user im:message.group_msg:get_as_user"
+    scopes = "docx:document:readonly search:docs:read wiki:wiki:readonly im:chat:read task:task:read docx:document docx:document:create docx:document:write_only docs:document.media:upload docs:document.media:download wiki:node:read wiki:node:create docs:document.comment:read docs:document.comment:create contact:user:search contact:contact.base:readonly contact:user.base:readonly board:whiteboard:node:read drive:drive im:message:send_as_bot im:message im:chat search:message im:message.send_as_user im:message.p2p_msg:get_as_user im:message.group_msg:get_as_user calendar:calendar:readonly calendar:calendar bitable:app:readonly bitable:app im:chat:create"
     auth_url = f"{AUTH_URL}?app_id={app_id}&redirect_uri={REDIRECT_URI}&state=feishu_inout&scope={scopes}"
 
     captured = {}
@@ -285,7 +285,11 @@ def get_primary_calendar_id(uat):
     if resp.get("code") != 0:
         print(f"Error getting primary calendar: {resp.get('msg', resp)}", file=sys.stderr)
         sys.exit(1)
-    return resp["data"]["calendars"][0]["calendar"]["calendar_id"]
+    data = resp["data"]
+    # Handle both formats: direct calendar_id or calendars array
+    if "calendar_id" in data:
+        return data["calendar_id"]
+    return data["calendars"][0]["calendar"]["calendar_id"]
 
 
 # --- Calendar / Meeting ---
